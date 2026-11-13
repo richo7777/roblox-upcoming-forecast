@@ -232,10 +232,20 @@ def main():
             rows.append({"universe_id": uid, "place": k, "p": round(p, 6)})
     rows.sort(key=lambda r: (r["place"], -r["p"], r["universe_id"]))
 
-    # top10: smallest average predicted rank among games with real top-10 mass.
+    # top10: order by expected place (probability-weighted), the point
+    # estimate that best matches the actual top 10 in order; it accounts
+    # for the diffusion and the reflecting barrier, where the raw drift
+    # centre alone would not.
+    def expected_place(uid):
+        ps = probs[uid]
+        tot = sum(ps)
+        if tot <= 0:
+            return mu_avg[uid]
+        return sum((k + 1) * ps[k] for k in range(places)) / tot
+
     ranked = sorted(
         games,
-        key=lambda x: (mu_avg[x["uid"]], x["r0"], x["uid"]),
+        key=lambda x: (expected_place(x["uid"]), mu_avg[x["uid"]], x["r0"], x["uid"]),
     )
     top10 = [x["uid"] for x in ranked[:places]]
 
